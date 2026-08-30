@@ -3,236 +3,477 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hydra — Video Editor</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Evric — Video Editor</title>
+<link rel="icon" type="image/png" href="main.png">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg: #0B0B0D;
-    --panel: #17171B;
-    --panel-line: #262629;
-    --text: #EDEAE4;
-    --text-dim: #8C8A87;
-    --accent: #E63946;
-    --accent-dim: #4EA8A0;
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #131210;
+    --bg-deep: #0d0c0a;
+    --surface: #1c1a16;
+    --surface-2: #221f19;
+    --line: #35302a;
+    --ink: #f3ede2;
+    --ink-dim: #9a9284;
+    --amber: #e8a33d;
+    --amber-dim: #a97a35;
+    --rust: #c1503a;
   }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  html{scroll-behavior:smooth;}
-  body{
-    background:var(--bg);
-    color:var(--text);
-    font-family:'Inter', sans-serif;
-    line-height:1.5;
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
   }
-  .mono{font-family:'IBM Plex Mono', monospace;}
-  .display{font-family:'Bebas Neue', sans-serif; letter-spacing:0.02em;}
+  .mono { font-family: 'IBM Plex Mono', monospace; }
 
-  /* ===== TIMELINE HEADER (signature element) ===== */
-  .timeline-bar{
-    position:sticky; top:0; z-index:10;
-    background:var(--bg);
-    border-bottom:1px solid var(--panel-line);
-    padding:14px 24px;
-    display:flex; align-items:center; justify-content:space-between;
-    font-size:12px;
+  /* ---------- Nav ---------- */
+  nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1.4rem 2.5rem; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: rgba(19,18,16,0.92);
+    backdrop-filter: blur(10px);
+    z-index: 100;
   }
-  .timeline-bar .ruler{
-    flex:1; height:1px; background:var(--panel-line);
-    margin:0 20px; position:relative; display:none;
+  .nav-brand { display: flex; align-items: center; gap: 10px; }
+  .rec-dot {
+    width: 9px; height: 9px; border-radius: 50%; background: var(--rust);
+    box-shadow: 0 0 8px rgba(193,80,58,0.7);
   }
-  @media(min-width:640px){ .timeline-bar .ruler{display:block;} }
-  .timeline-bar .ruler::before{
-    content:''; position:absolute; left:0; top:-4px;
-    width:2px; height:9px; background:var(--accent);
+  @media (prefers-reduced-motion: no-preference) {
+    .rec-dot { animation: pulse 2.4s ease-in-out infinite; }
   }
-  .timeline-bar .name{color:var(--text); letter-spacing:0.08em;}
-  .timeline-bar .code{color:var(--text-dim);}
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .nav-logo { font-family: 'Anton', sans-serif; font-size: 1.35rem; letter-spacing: 0.06em; color: var(--ink); text-transform: uppercase; }
+  .nav-links { display: flex; gap: 1.8rem; align-items: center; }
+  nav a { color: var(--ink-dim); text-decoration: none; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; transition: color 0.2s; }
+  nav a:hover { color: var(--amber); }
 
-  /* ===== HERO ===== */
-  .hero{
-    padding:100px 24px 80px;
-    max-width:900px; margin:0 auto;
-    border-bottom:1px solid var(--panel-line);
+  /* ---------- Timeline / scrubber signature ---------- */
+  .scrubber {
+    position: relative;
+    padding: 2.6rem 2.5rem 2.2rem;
+    max-width: 1000px; margin: 0 auto;
+    border-bottom: 1px solid var(--line);
   }
-  .hero .tc{color:var(--accent); font-size:13px; margin-bottom:18px; display:block;}
-  .hero h1{
-    font-size:clamp(48px, 9vw, 96px);
-    line-height:0.92;
-    text-transform:uppercase;
+  .scrubber-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em;
+    color: var(--ink-dim); margin-bottom: 1.1rem;
   }
-  .hero h1 span{color:var(--accent);}
-  .hero p{
-    margin-top:24px; max-width:480px;
-    color:var(--text-dim); font-size:16px;
+  .scrubber-label .rate { color: var(--amber); }
+  .scrubber-track {
+    position: relative; height: 34px;
+    background-image: repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 40px);
+    background-position: 0 100%;
+    border-bottom: 1px solid var(--line);
   }
-  .hero .tags{margin-top:28px; display:flex; gap:10px; flex-wrap:wrap;}
-  .tag{
-    border:1px solid var(--panel-line); color:var(--accent-dim);
-    padding:5px 12px; border-radius:2px; font-size:12px;
+  .scrubber-track::before {
+    content: '';
+    position: absolute; left: 0; right: 0; bottom: 0; height: 10px;
+    background-image: repeating-linear-gradient(90deg, var(--surface-2) 0 1px, transparent 1px 8px);
+  }
+  .playhead {
+    position: absolute; top: -4px; width: 2px; height: 38px; background: var(--amber);
+    left: 22%;
+    box-shadow: 0 0 10px rgba(232,163,61,0.6);
+  }
+  .playhead::before {
+    content: ''; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 7px solid var(--amber);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .playhead { animation: scrub 14s linear infinite; }
+  }
+  @keyframes scrub { 0% { left: 4%; } 50% { left: 92%; } 100% { left: 4%; } }
+  .hero-line {
+    font-family: 'Anton', sans-serif;
+    font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+    letter-spacing: 0.01em; text-transform: uppercase;
+    line-height: 1.05; margin-top: 1.8rem; max-width: 640px;
+  }
+  .hero-line span { color: var(--amber); }
+  .hero-sub { margin-top: 0.9rem; color: var(--ink-dim); font-size: 0.95rem; max-width: 480px; line-height: 1.6; }
+
+  /* ---------- Sections ---------- */
+  .section { max-width: 1000px; margin: 0 auto; padding: 4rem 2.5rem; border-bottom: 1px solid var(--line); }
+  .section:last-of-type { border-bottom: none; }
+  .section-label {
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 2.4rem;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+  /* ---------- About ---------- */
+  .about-row { display: grid; grid-template-columns: 200px 1fr; gap: 3rem; align-items: start; }
+  .pfp-frame {
+    position: relative;
+    width: 100%; aspect-ratio: 1; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .pfp-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pfp-strip {
+    position: absolute; left: 0; right: 0; height: 12px;
+    background-color: var(--line);
+    background-image: radial-gradient(circle at 10px 6px, var(--bg-deep) 2.6px, transparent 3px);
+    background-size: 20px 12px;
+  }
+  .pfp-strip.top { top: 0; }
+  .pfp-strip.bottom { bottom: 0; }
+  .pfp-tag { margin-top: 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--ink-dim); letter-spacing: 0.06em; }
+  .pfp-tag strong { color: var(--ink); display: block; font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 2px; }
+
+  .about-text p { color: var(--ink-dim); font-size: 0.97rem; line-height: 1.8; margin-bottom: 1rem; }
+  .about-text strong { color: var(--ink); font-weight: 600; }
+
+  .tool-row { display: flex; gap: 12px; margin-top: 1.6rem; }
+  .tool-chip {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px 8px 8px; background: var(--surface); border: 1px solid var(--line);
+  }
+  .tool-badge {
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 0.78rem;
+  }
+  .tool-badge.pr { background: #4b2fa0; color: #e9e0ff; }
+  .tool-badge.ae { background: #2f1a55; color: #d6c8ff; }
+  .tool-name { font-size: 0.78rem; color: var(--ink-dim); letter-spacing: 0.03em; }
+
+  .spec-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1.4rem; }
+  .spec-pill {
+    padding: 5px 12px; border: 1px solid var(--line); font-size: 0.7rem;
+    color: var(--ink-dim); letter-spacing: 0.04em; font-family: 'IBM Plex Mono', monospace;
+    transition: all 0.2s;
+  }
+  .spec-pill:hover { border-color: var(--amber); color: var(--amber); }
+
+  .stat-block {
+    margin-top: 1.8rem; padding-top: 1.4rem; border-top: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 14px;
+  }
+  .stat-num { font-family: 'Anton', sans-serif; font-size: 2.4rem; color: var(--amber); line-height: 1; }
+  .stat-label { font-size: 0.72rem; color: var(--ink-dim); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; }
+
+  /* ---------- Work / clip bin ---------- */
+  .bin-heading { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1.6rem; }
+  .bin-heading h2 { font-family: 'Anton', sans-serif; font-size: 1.4rem; letter-spacing: 0.03em; text-transform: uppercase; }
+  .bin-heading .range { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--ink-dim); }
+  .bin { margin-bottom: 3.2rem; }
+  .bin:last-child { margin-bottom: 0; }
+  .clip-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+
+  .clip-card {
+    background: var(--surface); border: 1px solid var(--line);
+    transition: border-color 0.25s, transform 0.25s;
+    display: block; text-decoration: none; color: inherit;
+  }
+  .clip-card:hover { border-color: var(--amber-dim); transform: translateY(-3px); }
+
+  .clip-card.is-locked { cursor: default; }
+  .clip-card.is-locked:hover { border-color: var(--line); transform: none; }
+  .clip-card.is-locked .clip-frame { opacity: 0.5; }
+  .clip-card.is-locked .play-tri { display: none; }
+  .clip-card.is-locked .clip-tag { color: var(--ink-dim); border-color: var(--line); }
+  .lock-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; letter-spacing: 0.06em;
+    color: var(--ink-dim); text-transform: uppercase;
   }
 
-  /* ===== SECTION LABELS ===== */
-  .section{max-width:1100px; margin:0 auto; padding:80px 24px;}
-  .section-head{
-    display:flex; align-items:baseline; gap:16px;
-    margin-bottom:44px; border-bottom:1px solid var(--panel-line); padding-bottom:16px;
+  .clip-sprocket {
+    height: 12px;
+    background-color: var(--line);
+    background-image: radial-gradient(circle at 10px 6px, var(--bg) 2.6px, transparent 3px);
+    background-size: 20px 12px;
   }
-  .section-head .tc{color:var(--text-dim); font-size:13px;}
-  .section-head h2{font-size:28px; text-transform:uppercase; letter-spacing:0.03em;}
+  .clip-frame {
+    aspect-ratio: 16/9; background: var(--bg-deep);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .clip-frame::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 3px);
+    pointer-events: none;
+  }
+  .clip-frame iframe { width: 100%; height: 100%; border: none; position: relative; z-index: 1; }
+  .clip-card.is-embed .clip-frame { aspect-ratio: auto; height: 280px; }
+  .play-tri {
+    width: 0; height: 0;
+    border-top: 11px solid transparent; border-bottom: 11px solid transparent;
+    border-left: 17px solid var(--ink-dim);
+    opacity: 0.55;
+    transition: opacity 0.2s, border-left-color 0.2s;
+  }
+  .clip-card:hover .play-tri { opacity: 1; border-left-color: var(--amber); }
+  .clip-tc {
+    position: absolute; bottom: 8px; right: 10px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--ink-dim);
+    background: rgba(13,12,10,0.7); padding: 2px 6px;
+  }
+  .clip-info { padding: 0.85rem 1rem; display: flex; justify-content: space-between; align-items: center; }
+  .clip-file { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--ink); }
+  .clip-tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--amber); border: 1px solid var(--amber-dim); padding: 3px 8px; }
 
-  /* ===== CLIP GRID (portfolio items) ===== */
-  .clips{display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:28px;}
-  .clip{background:var(--panel); border:1px solid var(--panel-line);}
-  .clip .frame{
-    aspect-ratio:16/9; width:100%; background:#000;
-    position:relative; overflow:hidden;
+  /* ---------- Footer ---------- */
+  footer {
+    max-width: 1000px; margin: 0 auto; padding: 1.8rem 2.5rem;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--ink-dim);
   }
-  .clip .frame iframe{width:100%; height:100%; border:0; display:block;}
-  .clip .meta{padding:16px 18px 20px;}
-  .clip .in-out{color:var(--text-dim); font-size:11px; margin-bottom:8px;}
-  .clip h3{font-size:17px; margin-bottom:6px;}
-  .clip p{color:var(--text-dim); font-size:13px;}
+  .footer-name { color: var(--ink); letter-spacing: 0.08em; }
 
-  /* ===== SKILLS / TOOLS AS EQ-STYLE BARS ===== */
-  .tools{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:24px;}
-  .tool-row{display:flex; align-items:center; gap:14px;}
-  .tool-row .label{width:110px; font-size:13px; flex-shrink:0;}
-  .tool-row .bar{flex:1; height:6px; background:var(--panel-line); position:relative;}
-  .tool-row .bar span{
-    position:absolute; left:0; top:0; height:100%; background:var(--accent-dim);
+  @media (max-width: 640px) {
+    .clip-grid { grid-template-columns: 1fr; }
+    .about-row { grid-template-columns: 1fr; }
+    .pfp-frame { max-width: 160px; }
+    nav a { display: none; }
+    .scrubber-label { flex-direction: column; gap: 4px; align-items: flex-start; }
   }
-
-  /* ===== CONTACT ===== */
-  .contact{
-    text-align:left; border-top:1px solid var(--panel-line);
-    padding:80px 24px 60px; max-width:1100px; margin:0 auto;
-  }
-  .contact h2{font-size:clamp(36px,6vw,64px); text-transform:uppercase; max-width:700px;}
-  .contact-links{margin-top:32px; display:flex; gap:28px; flex-wrap:wrap;}
-  .contact-links a{
-    color:var(--text); text-decoration:none; font-size:14px;
-    border-bottom:1px solid var(--accent); padding-bottom:2px;
-  }
-  .contact-links a:hover{color:var(--accent);}
-  footer{
-    text-align:center; padding:24px; color:var(--text-dim); font-size:12px;
-    border-top:1px solid var(--panel-line);
-  }
-
-  /* accessibility */
-  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
-  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} }
 </style>
 </head>
 <body>
 
-  <div class="timeline-bar mono">
-    <span class="name">HYDRA_EDITS.PROJECT</span>
-    <div class="ruler"></div>
-    <span class="code">00:00:00:00</span>
+<nav>
+  <div class="nav-brand">
+    <span class="rec-dot"></span>
+    <span class="nav-logo">Evric</span>
+  </div>
+  <div class="nav-links">
+    <a href="#work">Work</a>
+    <a href="#about">About</a>
+  </div>
+</nav>
+
+<div class="scrubber">
+  <div class="scrubber-label">
+    <span>00:00:00:00 — SHOWREEL</span>
+    <span class="rate">23.976 FPS</span>
+  </div>
+  <div class="scrubber-track">
+    <div class="playhead"></div>
+  </div>
+  <div class="hero-line">Footage in. <span>Story out.</span></div>
+  <p class="hero-sub">Freelance video editor cutting gaming content — long-form uploads and short-form clips that hold attention from frame one.</p>
+</div>
+
+<section class="section" id="about">
+  <div class="section-label">Operator</div>
+  <div class="about-row">
+    <div>
+      <div class="pfp-frame">
+        <div class="pfp-strip top"></div>
+        <img src="avatar.png" alt="Evric" />
+        <div class="pfp-strip bottom"></div>
+      </div>
+      <div class="pfp-tag">
+        <strong>Evric</strong>
+        Video Editor
+      </div>
+    </div>
+    <div class="about-text">
+      <p>I'm a <strong>freelance video editor</strong> focused on gaming content — long-form uploads and short-form cuts for Shorts and Reels. I care about pacing and rhythm, not just hitting "export."</p>
+      <p>I handle everything from raw footage to final delivery: cutting, color, sound design, and motion graphics, so a project never has to leave one pair of hands.</p>
+
+      <div class="tool-row">
+        <div class="tool-chip">
+          <div class="tool-badge pr">Pr</div>
+          <div class="tool-name">Premiere Pro</div>
+        </div>
+        <div class="tool-chip">
+          <div class="tool-badge ae">Ae</div>
+          <div class="tool-name">After Effects</div>
+        </div>
+      </div>
+
+      <div class="spec-list">
+        <span class="spec-pill">Long-form Gaming</span>
+        <span class="spec-pill">YouTube Shorts</span>
+        <span class="spec-pill">Instagram Reels</span>
+        <span class="spec-pill">Color Grading</span>
+        <span class="spec-pill">Motion Graphics</span>
+        <span class="spec-pill">SFX & Music Sync</span>
+      </div>
+
+      <div class="stat-block">
+        <div class="stat-num">5+</div>
+        <div class="stat-label">Years<br>Experience</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="work">
+  <div class="section-label">Clip Bin</div>
+
+  <div class="bin">
+    <div class="bin-heading">
+      <h2>Motion Graphics</h2>
+      <span class="range">00:00:10 – 00:00:30 AVG</span>
+    </div>
+    <div class="clip-grid">
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://drive.google.com/file/d/1R9ACnpC_gO6b8Tqmw9abVIUp8C41BamS/preview" allow="autoplay" allowfullscreen></iframe>
+        </div>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Motion Graphics</span>
+        </div>
+      </div>
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://drive.google.com/file/d/1XLJVsROzxkFfrHqxi4FNHlNYsZLV_zVJ/preview" allow="autoplay" allowfullscreen></iframe>
+        </div>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Motion Graphics</span>
+        </div>
+      </div>
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://drive.google.com/file/d/1vU_4eyJ1LR2rzo7QdGZLQeeXLL7IEWvd/preview" allow="autoplay" allowfullscreen></iframe>
+        </div>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Motion Graphics</span>
+        </div>
+      </div>
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://drive.google.com/file/d/1TnkjTL2FvYUIayZ6hSSNNbStHOGLPERm/preview" allow="autoplay" allowfullscreen></iframe>
+        </div>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Motion Graphics</span>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- ============ HERO — edit name / tagline / tags ============ -->
-  <section class="hero">
-    <span class="tc mono">// REEL_001 — SHOWREEL</span>
-    <h1>Hydra<br>cuts<span>.</span> paces<span>.</span> hooks<span>.</span></h1>
-    <p>Video editor specializing in fast-paced explainers and short-form storytelling. I turn raw footage and long scripts into videos people actually finish watching.</p>
-    <div class="tags mono">
-      <span class="tag">LONG-FORM</span>
-      <span class="tag">SHORTS</span>
-      <span class="tag">MOTION GRAPHICS</span>
-      <span class="tag">SOUND DESIGN</span>
+  <div class="bin">
+    <div class="bin-heading">
+      <h2>Shorts &amp; Reels</h2>
+      <span class="range">00:00:15 – 00:01:00 AVG</span>
     </div>
-  </section>
-
-  <!-- ============ SELECTED WORK — replace the 4 clips below with your own videos ============ -->
-  <section class="section" id="work">
-    <div class="section-head">
-      <span class="tc mono">01</span>
-      <h2>Selected Work</h2>
-    </div>
-    <div class="clips">
-
-      <!-- CLIP 1 — replace YOUTUBE_ID_1, title, description -->
-      <div class="clip">
-        <div class="frame">
-          <iframe src="https://www.youtube.com/embed/YOUTUBE_ID_1" title="Project 1" allowfullscreen></iframe>
+    <div class="clip-grid">
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://www.youtube-nocookie.com/embed/ts7Pg2sGl4g" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
         </div>
-        <div class="meta">
-          <div class="in-out mono">IN 00:00 — OUT 02:14</div>
-          <h3>Project title one</h3>
-          <p>One line on what this edit does — the story, the pacing choice, or the client goal.</p>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Short-form</span>
         </div>
       </div>
-
-      <!-- CLIP 2 -->
-      <div class="clip">
-        <div class="frame">
-          <iframe src="https://www.youtube.com/embed/YOUTUBE_ID_2" title="Project 2" allowfullscreen></iframe>
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://www.youtube-nocookie.com/embed/vp7MJ36t8Kk" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
         </div>
-        <div class="meta">
-          <div class="in-out mono">IN 00:00 — OUT 00:47</div>
-          <h3>Project title two</h3>
-          <p>One line describing this piece — e.g. viral short, hook-driven cold open.</p>
-        </div>
-      </div>
-
-      <!-- CLIP 3 -->
-      <div class="clip">
-        <div class="frame">
-          <iframe src="https://www.youtube.com/embed/YOUTUBE_ID_3" title="Project 3" allowfullscreen></iframe>
-        </div>
-        <div class="meta">
-          <div class="in-out mono">IN 00:00 — OUT 05:30</div>
-          <h3>Project title three</h3>
-          <p>One line describing this piece.</p>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Short-form</span>
         </div>
       </div>
-
-      <!-- CLIP 4 -->
-      <div class="clip">
-        <div class="frame">
-          <iframe src="https://www.youtube.com/embed/YOUTUBE_ID_4" title="Project 4" allowfullscreen></iframe>
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://drive.google.com/file/d/1wcVzUYO4bJ-5BR9cJGETfP5WTbmNttDH/preview" allow="autoplay" allowfullscreen></iframe>
         </div>
-        <div class="meta">
-          <div class="in-out mono">IN 00:00 — OUT 01:12</div>
-          <h3>Project title four</h3>
-          <p>One line describing this piece.</p>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Short-form</span>
         </div>
       </div>
-
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://drive.google.com/file/d/1BWlWv7e3rAePKtd8etH2EwKBtD_fwWFI/preview" allow="autoplay" allowfullscreen></iframe>
+        </div>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Short-form</span>
+        </div>
+      </div>
     </div>
-  </section>
+  </div>
 
-  <!-- ============ TOOLS — adjust bar widths (%) to match your skill level ============ -->
-  <section class="section" id="tools">
-    <div class="section-head">
-      <span class="tc mono">02</span>
-      <h2>Tools</h2>
+  <div class="bin">
+    <div class="bin-heading">
+      <h2>Long-form Videos</h2>
+      <span class="range">00:08:00 – 00:22:00 AVG</span>
     </div>
-    <div class="tools mono">
-      <div class="tool-row"><span class="label">Premiere Pro</span><div class="bar"><span style="width:90%"></span></div></div>
-      <div class="tool-row"><span class="label">After Effects</span><div class="bar"><span style="width:70%"></span></div></div>
-      <div class="tool-row"><span class="label">DaVinci Resolve</span><div class="bar"><span style="width:60%"></span></div></div>
-      <div class="tool-row"><span class="label">CapCut</span><div class="bar"><span style="width:85%"></span></div></div>
-      <div class="tool-row"><span class="label">Audition</span><div class="bar"><span style="width:55%"></span></div></div>
-      <div class="tool-row"><span class="label">Photoshop</span><div class="bar"><span style="width:65%"></span></div></div>
+    <div class="clip-grid">
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://www.youtube-nocookie.com/embed/tCfzYU4acwc" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        </div>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Long-form</span>
+        </div>
+      </div>
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://drive.google.com/file/d/14wBZw8-hVDnOBwh4COkYFcDj0MDtkXmd/preview" allow="autoplay" allowfullscreen></iframe>
+        </div>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Long-form</span>
+        </div>
+      </div>
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://www.youtube-nocookie.com/embed/QPUi-zSPQvM" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        </div>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Long-form</span>
+        </div>
+      </div>
+      <div class="clip-card is-embed">
+        <div class="clip-sprocket"></div>
+        <div class="clip-frame">
+          <iframe src="https://www.youtube-nocookie.com/embed/Rq-_L_ujftA" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        </div>
+        <div class="clip-sprocket"></div>
+        <div class="clip-info">
+          <span class="clip-file">dummy.mp4</span>
+          <span class="clip-tag">Long-form</span>
+        </div>
+      </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ============ CONTACT — replace with your real links ============ -->
-  <section class="contact">
-    <span class="tc mono">03 — CONTACT</span>
-    <h2>Let's cut<br>something together.</h2>
-    <div class="contact-links mono">
-      <a href="mailto:youremail@example.com">EMAIL</a>
-      <a href="https://youtube.com/@yourchannel">YOUTUBE</a>
-      <a href="https://instagram.com/yourhandle">INSTAGRAM</a>
-      <a href="https://twitter.com/yourhandle">X / TWITTER</a>
-    </div>
-  </section>
-
-  <footer class="mono">© 2026 HYDRA — BUILT ON GITHUB PAGES</footer>
+<footer>
+  <span class="footer-name">EVRIC</span>
+  <span class="mono">END OF REEL — 00:00:00:00</span>
+</footer>
 
 </body>
 </html>
